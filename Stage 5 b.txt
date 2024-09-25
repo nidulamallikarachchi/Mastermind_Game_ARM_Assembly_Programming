@@ -1,0 +1,474 @@
+  1|//    -------------------------------- stage 5.b--------------------------------
+  2|//R0 to store new code
+  3|//R1 to print strings
+  4|//R5 to counters
+  5|//R8 to store secretcode
+  6|//R10 to store querycode
+  7|//R9 toggle to switch between options,(true or false)
+  8|//R12 for guess number
+  9|      MOV R1, #msg0
+ 10|      STR R1, .WriteString
+ 11|      MOV R1, #msg1
+ 12|      STR R1, .WriteString
+ 13|      MOV R1, #code_maker
+ 14|      STR R1, .ReadString 
+ 15|      STR R1, .WriteString
+ 16|      MOV R1, #msg2
+ 17|      STR R1, .WriteString
+ 18|      MOV R1, #code_breaker
+ 19|      STR R1, .ReadString 
+ 20|      STR R1, .WriteString
+ 21|      MOV R1, #msg3
+ 22|      STR R1, .WriteString
+ 23|      LDR R12, .InputNum 
+ 24|      STR R12, .WriteSignedNum
+ 25|      MOV R1, #msg4
+ 26|      STR R1, .WriteString
+ 27|      MOV R1, #code_maker
+ 28|      STR R1, .WriteString
+ 29|      MOV R1, #msg5
+ 30|      STR R1, .WriteString
+ 31|      MOV R1, #code_breaker
+ 32|      STR R1, .WriteString
+ 33|      MOV R1, #msg3
+ 34|      STR R1, .WriteString
+ 35|      MOV R1, R12
+ 36|      STR R1, .WriteSignedNum
+ 37|      MOV R1, #msg6
+ 38|      STR R1, .WriteString
+ 39|get_code_maker:         //Getting secret code----
+ 40|      MOV R1, #code_maker
+ 41|      STR R1, .WriteString
+ 42|      MOV R1, #msg10
+ 43|      STR R1, .WriteString
+ 44|      MOV R0, #stringData
+ 45|      STR R0, .ReadSecret //reading as a secret 
+ 46|      MOV R5, #0
+ 47|      MOV R9, #1        // R9 = true
+ 48|      BL get_code       // call function ----
+ 49|get_code_breaker:
+ 50|      MOV R9, #0        //R9 = false
+ 51|      MOV R6, #0
+ 52|      MOV R1, #msg13
+ 53|      STR R1, .WriteString
+ 54|      MOV R1, #code_breaker
+ 55|      STR R1, .WriteString
+ 56|      MOV R1, #msg11
+ 57|      STR R1, .WriteString
+ 58|      STR R12, .WriteSignedNum //remaining guesses left are displayed
+ 59|      MOV R0, #stringData
+ 60|      STR R0, .ReadString //  Read for input
+ 61|      STR R0, .WriteString
+ 62|      MOV R5, #0
+ 63|      BL get_code       // call function ----
+ 64|guess_counter:
+ 65|      MOV R2, #0 
+ 66|      MOV R5, #0 
+ 67|      MOV R4, #0
+ 68|      MOV R7, #0
+ 69|      SUB R12, R12, #1  // counting guesses
+ 70|      CMP R12, #0
+ 71|      BGT comparecodes
+ 72|      BEQ comparecodes
+ 73|success_rate: 
+ 74|      MOV R2, #msg14
+ 75|      STR R2, .WriteString
+ 76|      STR R0, .WriteSignedNum
+ 77|      MOV R2, #msg15
+ 78|      STR R2, .WriteString
+ 79|      STR R1, .WriteSignedNum
+ 80|      CMP R0, #4  // check for wins
+ 81|      BEQ win   
+ 82|      CMP R12, #0
+ 83|      BNE get_code_breaker
+ 84|      CMP R0, #4  // if all attempts are gone breaker will lose
+ 85|      BNE lose
+ 86|win:
+ 87|      MOV R2, #msg16
+ 88|      STR R2, .WriteString
+ 89|      MOV R2, #msg18
+ 90|      STR R2, .WriteString
+ 91|      B print
+ 92|lose:
+ 93|      MOV R2, #msg17
+ 94|      STR R2, .WriteString
+ 95|      MOV R2, #msg18
+ 96|      STR R2, .WriteString
+ 97|      HALT
+ 98|//-----------------------------------functions----------------------------------
+ 99|//----/GET CODE/------//
+100|get_code:
+101|      MOV R1, #0
+102|      MOV R3, #0
+103|      MOV R5, #0
+104|too_many_letters:
+105|// function to calculate whether there are too many letters  
+106|      LDRB R2, [R0+R5]
+107|      ADD R5,R5,#1
+108|      CMP R5, #5
+109|      BNE too_many_letters
+110|      CMP R2, #0
+111|//the 5th block in the array should contain 0, else if there is a value,
+112|//then more than 4 inputs have been entered
+113|      BNE invalid       //if there are more than 4 letters -> invalid
+114|      MOV R5,#0
+115|less_letters:
+116|// function to calculate less letters
+117|      LDRB R2, [R0+R5]
+118|      ADD R5,R5,#1
+119|      CMP R2, #0
+120|//up to 4th block in the array should contain more than 0, else if there is a 0,
+121|//then less than 4 inputs have been entered
+122|      BEQ invalid
+123|      CMP R5, #4
+124|      BNE less_letters
+125|      MOV R5, #0
+126|      MOV R2,#0
+127|capital_simple: 
+128|      LDRB R2, [R0+R1] 
+129|      CMP R2, #65       // Compare R2 with ASCII 'A' (65)
+130|      BLT lowercase 
+131|      CMP R2, #90       // Compare R2 with ASCII 'Z' (90)
+132|      BGT lowercase 
+133|      ADD R2, R2, #32   // Convert uppercase letter to lowercase
+134|      STRB R2, [R0+R1] 
+135|lowercase: 
+136|      ADD R1, R1, #1
+137|      ADD R3, R3, #1    // Increment R3
+138|      STRB R2, [R0 + R5] // Store the byte from R2 into secretcode[R5]
+139|      ADD R5, R5, #1 
+140|      CMP R3, #4        // Compare R3 with 4
+141|      BNE capital_simple
+142|      MOV R5, #0
+143|      CMP R9, #1
+144|      BEQ store_to_secretcode_array
+145|      MOV R5, #0
+146|      CMP R9, #0
+147|      BEQ store_to_querycode_array
+148|pick_letter1:           // if  user inputs same letter twice
+149|      LDRB R2, [R0+R5]
+150|      MOV R7, R5
+151|pick_letter2:           // if  user inputs same letter twice
+152|      ADD R6, R7, #1
+153|      ADD R7, R7, #1
+154|      CMP R7, #4 
+155|      BEQ letters_counter
+156|      LDRB R3, [R0+R6]
+157|      CMP R2, R3        //searching for same ascii values
+158|      BEQ invalid
+159|      B pick_letter2
+160|letters_counter:
+161|      ADD R5, R5, #1
+162|      CMP R5, #4        //searching for repetition, if  user inputs a same letter twice
+163|      BEQ second_check
+164|      B pick_letter1
+165|second_check:
+166|      MOV R5, #0
+167|      MOV R7, #0
+168|rgbypc1:                // if the user inputs a wrong letter (check letter)  
+169|      LDRB R2, [R0+R5]
+170|      CMP R2, #114
+171|      BEQ rgbypc2
+172|      CMP R2, #103
+173|      BEQ rgbypc2
+174|      CMP R2, #98
+175|      BEQ rgbypc2
+176|      CMP R2, #121
+177|      BEQ rgbypc2
+178|      CMP R2, #112
+179|      BEQ rgbypc2
+180|      CMP R2, #99
+181|      BEQ rgbypc2
+182|      B invalid
+183|rgbypc2:                // if the user inputs a wrong letter (change checking letter)
+184|      ADD R5, R5, #1
+185|      CMP R5, #4
+186|      BEQ splitter
+187|      B rgbypc1
+188|      RET 
+189|splitter: 
+190|// based on value of R9 program will branched to different places
+191|      CMP R9, #1
+192|      BEQ get_code_breaker
+193|      CMP R9, #0
+194|      BEQ guess_counter
+195|//return
+196|//'r' has an ASCII value of 114.
+197|//'g' has an ASCII value of 103.
+198|//'b' has an ASCII value of 98.
+199|//'y' has an ASCII value of 121.
+200|//'p' has an ASCII value of 112.
+201|//'c' has an ASCII value of 99.
+202|store_to_secretcode_array:
+203|      MOV R8, #secretcode //initializes secretcode array to R0
+204|      MOV R6, #0
+205|//below code transfer data values stored in stringData array, to secretcode array
+206|      LDRB R6, [R0+R5]
+207|      STRB R6, [R8+R5]
+208|      ADD R5, R5, #1    //array increment
+209|      CMP R5, #4
+210|      BLT store_to_secretcode_array
+211|      MOV R5, #0
+212|      B pick_letter1
+213|/////
+214|///
+215|//
+216|store_to_querycode_array:
+217|      MOV R10, #querycode //initializes secretcode array to R0
+218|      MOV R6, #0
+219|//below code transfer data values stored in stringData array, to secretcode array
+220|      LDRB R6, [R0+R5]
+221|      STRB R6, [R10+R5]
+222|      ADD R5, R5, #1    //array increment
+223|      CMP R5, #4
+224|      BLT store_to_querycode_array
+225|      MOV R5, #0
+226|      B pick_letter1
+227|/////
+228|///
+229|//
+230|invalid:
+231|      MOV R1, #msg7
+232|      STR R1, .WriteString
+233|      CMP R9, #1        // if R9 = 1 program will be forwarded to get_code_maker
+234|      BEQ get_code_maker
+235|      CMP R9, #0
+236|      BEQ get_code_breaker // if R9 = 0 program will be forwarded to get_code_breaker
+237|//R9 is used to toggle between the code_maker input and the code_breaker input
+238|//-----------/COMPARECODES/--------------
+239|comparecodes:
+240|      MOV R0, #0
+241|      MOV R1, #0
+242|      MOV R4,#0
+243|      B compare_positions
+244|compare_positions:
+245|      ADD R7, R7, #1
+246|      LDRB R5, [R8+R4]
+247|      LDRB R6, [R10+R4]
+248|      ADD R4, R4, #1
+249|      CMP R7, #5
+250|      BEQ compare_digit1
+251|      CMP R5, R6
+252|      BEQ position_same
+253|      B compare_positions
+254|position_same:
+255|      ADD R0, R0, #1
+256|      B compare_positions
+257|compare_digit1: 
+258|      LDRB R6, [R10+#0] 
+259|      LDRB R5, [R8+#1] 
+260|      CMP R5, R6 
+261|      BEQ colour1 
+262|      LDRB R5, [R8+#2] 
+263|      CMP R5, R6 
+264|      BEQ colour1 
+265|      LDRB R5, [R8+#3] 
+266|      CMP R5, R6 
+267|      BEQ colour1 
+268|      B compare_digit2 
+269|compare_digit2: 
+270|      LDRB R6, [R10+#1] 
+271|      LDRB R5, [R8+#0] 
+272|      CMP R5, R6 
+273|      BEQ colour2 
+274|      LDRB R5, [R8+#2] 
+275|      CMP R5, R6 
+276|      BEQ colour2 
+277|      LDRB R5, [R8+#3] 
+278|      CMP R5, R6 
+279|      BEQ colour2 
+280|      B compare_digit3 
+281|compare_digit3: 
+282|      LDRB R6, [R10+#2] 
+283|      LDRB R5, [R8+#0] 
+284|      CMP R5, R6 
+285|      BEQ colour3 
+286|      LDRB R5, [R8+#1] 
+287|      CMP R5, R6 
+288|      BEQ colour3 
+289|      LDRB R5, [R8+#3] 
+290|      CMP R5, R6 
+291|      BEQ colour3 
+292|      B compare_digit4 
+293|compare_digit4: 
+294|      LDRB R6, [R10+#3] 
+295|      LDRB R5, [R8+#0] 
+296|      CMP R5, R6 
+297|      BEQ colour4 
+298|      LDRB R5, [R8+#1] 
+299|      CMP R5, R6 
+300|      BEQ colour4 
+301|      LDRB R5, [R8+#2] 
+302|      CMP R5, R6 
+303|      BEQ colour4
+304|      B success_rate
+305|colour1: 
+306|      ADD R1, R1, #1 
+307|      B compare_digit2 
+308|colour2: 
+309|      ADD R1, R1, #1 
+310|      B compare_digit3 
+311|colour3: 
+312|      ADD R1, R1, #1 
+313|      B compare_digit4 
+314|colour4: 
+315|      ADD R1, R1, #1
+316|      b success_rate
+317|//---------------------------------------------PRINT WIN!!!--pixel dispaly-----------------------------------------
+318|print:
+319|      MOV R9, #.purple  //or any colour
+320|      MOV R11, #.yellow
+321|      MOV R8, #.green
+322|      MOV R7, #.red
+323|      MOV R6, #.blue
+324|      MOV R10, #.cyan
+325|      MOV R3, #.Pixel0
+326|      MOV R5, #0
+327|loop1c:
+328|      STR R10, [R3+R5]
+329|      ADD R5, R5, #4    //Get the pixel index
+330|      CMP R5, #1536
+331|      BNE loop1c
+332|      MOV R5, #1540
+333|loop1y:
+334|      STR R11, [R3+R5]
+335|      ADD R5, R5, #4    //Get the pixel index
+336|      CMP R5, #3072
+337|      BNE loop1y
+338|      MOV R5, #0
+339|loop1:
+340|      STR R9, [R3+R5]
+341|      ADD R5, R5, #4    //Get the pixel index
+342|      CMP R5, #128
+343|      BNE loop1
+344|      MOV R5,#2944
+345|loop2:
+346|      STR R9, [R3+R5]
+347|      ADD R5, R5, #4
+348|      CMP R5, #3056
+349|      BNE loop2
+350|      STR R9, [R3+#3056]
+351|      STR R9, [R3+#3060]
+352|      STR R9, [R3+#3064]
+353|      STR R9, [R3+#3068]
+354|      MOV R5, #128
+355|loop3:
+356|      STR R9, [R3+R5]
+357|      ADD R5, R5, #128
+358|      CMP R5, #2944
+359|      BNE loop3
+360|      MOV R5, #128
+361|loop4:
+362|      SUB R5, R5, #4
+363|      STR R9, [R3+R5]
+364|      ADD R5, R5, #128
+365|      ADD R5, R5, #4
+366|      CMP R5, #2944
+367|      STR R9, [R3+#2940]
+368|      BNE loop4
+369|      MOV R5, #820
+370|loop5:
+371|      STR R8, [R3+R5]
+372|      ADD R5, R5, #4
+373|      CMP R5, #848
+374|      BNE loop5
+375|      MOV R5, #960
+376|loop6:
+377|      STR R8, [R3+R5]
+378|      ADD R5, R5, #128
+379|      CMP R5, #2368
+380|      BNE loop6
+381|      MOV R5, #2356
+382|loop7:
+383|      STR R8, [R3+R5]
+384|      ADD R5, R5, #4
+385|      CMP R5, #2384
+386|      BNE loop7
+387|      MOV R5, #776
+388|loop8:
+389|      STR R7, [R3+R5]
+390|      ADD R5, R5, #128
+391|      CMP R5, #2192
+392|      BLT loop8
+393|      MOV R5, #812
+394|loop9:
+395|      STR R7, [R3+R5]
+396|      ADD R5, R5, #128
+397|      CMP R5, #2224
+398|      BLT loop9
+399|      MOV R5, #1432
+400|loop10:
+401|      STR R7, [R3+R5]
+402|      ADD R5, R5, #128
+403|      CMP R5, #2064
+404|      BLT loop10
+405|      MOV R5, #1436
+406|loop11:
+407|      STR R7, [R3+R5]
+408|      ADD R5, R5, #128
+409|      CMP R5, #2064
+410|      BLT loop11
+411|      STR R7, [R3+#2068]
+412|      STR R7, [R3+#2196]
+413|      STR R7, [R3+#2324]
+414|      STR R7, [R3+#2320]
+415|      STR R7, [R3+#2316]
+416|      STR R7, [R3+#2080]
+417|      STR R7, [R3+#2208]
+418|      STR R7, [R3+#2336]
+419|      STR R7, [R3+#2340]
+420|      STR R7, [R3+#2344]
+421|      MOV R5, #852
+422|loop12:
+423|      STR R6, [R3+R5]
+424|      ADD R5, R5, #128
+425|      CMP R5, #2496
+426|      BLT loop12
+427|      MOV R5, #884
+428|loop13:
+429|      STR R6, [R3+R5]
+430|      ADD R5, R5, #128
+431|      CMP R5, #2496
+432|      BLT loop13
+433|      STR R6, [R3+#984]
+434|      STR R6, [R3+#1112]
+435|      STR R6, [R3+#1116]
+436|      STR R6, [R3+#1244]
+437|      STR R6, [R3+#1248]
+438|      STR R6, [R3+#1376]
+439|      STR R6, [R3+#1504]
+440|      STR R6, [R3+#1508]
+441|      STR R6, [R3+#1636]
+442|      STR R6, [R3+#1764]
+443|      STR R6, [R3+#1768]
+444|      STR R6, [R3+#1896]
+445|      STR R6, [R3+#2024]
+446|      STR R6, [R3+#2028]
+447|      STR R6, [R3+#2156]
+448|      STR R6, [R3+#2160]
+449|      STR R6, [R3+#2288]
+450|      HALT
+451|      .Align 256
+452|msg0: .ASCIZ "----Welcome to Mastermind----"
+453|msg1: .ASCIZ "\nCodemaker's name: "
+454|msg2: .ASCIZ "\nCodebreaker's name: "
+455|msg3: .ASCIZ "\nMaximum number of guesses: "
+456|msg4: .ASCIZ "\nCodebreaker is "
+457|msg5: .ASCIZ "\nCodemaker is "
+458|stringData: .BLOCK 200
+459|msg6: .ASCIZ "\nColours:\n'r' - red\n'g' - green\n'b' - blue\n'y' - yellow\n'p' - purple\n'c' - cyan\n"
+460|msg7: .ASCIZ "\nINVALID INPUT TRY AGAIN\n"
+461|msg8: .ASCIZ "Enter a code using the above colours:\n"
+462|msg9: .ASCIZ "\nprogram ended successfully!"
+463|msg10: .ASCIZ ", please enter a 4-character secret code"
+464|msg11: .ASCIZ ", this is guess number:"
+465|msg13: .ASCIZ "\n"
+466|msg14: .ASCIZ "\nPosition matches: "
+467|msg15: .ASCIZ "\nColour matches: "
+468|msg16: .ASCIZ "\nyou WIN! "
+469|msg17: .ASCIZ "\nyou LOSE! "
+470|msg18: .ASCIZ "\n---Game Over---"
+471|code_maker: .BLOCK 200
+472|code_breaker: .BLOCK 200
+473|secretcode: .BLOCK 200
+474|querycode: .BLOCK 200

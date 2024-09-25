@@ -1,0 +1,238 @@
+  1|//    -------------------------------- stage 4--------------------------------
+  2|//R0 to store new code
+  3|//R1 to print strings
+  4|//R5 to counters
+  5|//R8 to store secretcode
+  6|//R10 to store querycode
+  7|//R9 toggle to switch between options,(true or false)
+  8|//R12 for guess number
+  9|      MOV R1, #msg0
+ 10|      STR R1, .WriteString
+ 11|      MOV R1, #msg1
+ 12|      STR R1, .WriteString
+ 13|      MOV R1, #code_maker
+ 14|      STR R1, .ReadString 
+ 15|      STR R1, .WriteString
+ 16|      MOV R1, #msg2
+ 17|      STR R1, .WriteString
+ 18|      MOV R1, #code_breaker
+ 19|      STR R1, .ReadString 
+ 20|      STR R1, .WriteString
+ 21|      MOV R1, #msg3
+ 22|      STR R1, .WriteString
+ 23|      LDR R12, .InputNum 
+ 24|      STR R12, .WriteSignedNum
+ 25|      MOV R1, #msg4
+ 26|      STR R1, .WriteString
+ 27|      MOV R1, #code_maker
+ 28|      STR R1, .WriteString
+ 29|      MOV R1, #msg5
+ 30|      STR R1, .WriteString
+ 31|      MOV R1, #code_breaker
+ 32|      STR R1, .WriteString
+ 33|      MOV R1, #msg3
+ 34|      STR R1, .WriteString
+ 35|      MOV R1, R12
+ 36|      STR R1, .WriteSignedNum
+ 37|      MOV R1, #msg6
+ 38|      STR R1, .WriteString
+ 39|get_code_maker:         //Getting secret code----
+ 40|      MOV R1, #code_maker
+ 41|      STR R1, .WriteString
+ 42|      MOV R1, #msg10
+ 43|      STR R1, .WriteString
+ 44|      MOV R0, #stringData
+ 45|      STR R0, .ReadSecret //reading as a secret 
+ 46|      MOV R5, #0
+ 47|      MOV R9, #1        // R9 = true
+ 48|      BL get_code       // call function ----
+ 49|get_code_breaker:
+ 50|      MOV R9, #0        //R9 = false
+ 51|      MOV R6, #0
+ 52|      MOV R1, #msg13
+ 53|      STR R1, .WriteString
+ 54|      MOV R1, #code_breaker
+ 55|      STR R1, .WriteString
+ 56|      MOV R1, #msg11
+ 57|      STR R1, .WriteString
+ 58|      STR R12, .WriteSignedNum //remaining guesses left are displayed
+ 59|      MOV R0, #stringData
+ 60|      STR R0, .ReadString //  Read for input
+ 61|      STR R0, .WriteString
+ 62|      MOV R5, #0
+ 63|      BL get_code       // call function ----
+ 64|guess_counter:          // counting guesses
+ 65|      SUB R12, R12, #1
+ 66|      CMP R12, #0
+ 67|//will run the loop according to the number of guesses allowed (stored in R12)
+ 68|      BEQ end
+ 69|      B get_code_breaker
+ 70|end:                    //for checking and debug uses
+ 71|      MOV R1, #0
+ 72|      MOV R2, #0
+ 73|      MOV R9, #0
+ 74|      LDRB R5, [R8+R1]
+ 75|      LDRB R6, [R10+R1]
+ 76|      MOV R0, #0
+ 77|      MOV R1, #msg9
+ 78|      STR R1, .WriteString
+ 79|      HALT
+ 80|//-----------------------------------functions----------------------------------
+ 81|get_code:
+ 82|      MOV R1, #0
+ 83|      MOV R3, #0
+ 84|      MOV R5, #0
+ 85|too_many_letters:
+ 86|// function to calculate whether there are too many letters  
+ 87|      LDRB R2, [R0+R5]
+ 88|      ADD R5,R5,#1
+ 89|      CMP R5, #5
+ 90|      BNE too_many_letters
+ 91|      CMP R2, #0
+ 92|//the 5th block in the array should contain 0, else if there is a value,
+ 93|//then more than 4 inputs have been entered
+ 94|      BNE invalid       //if there are more than 4 letters -> invalid
+ 95|      MOV R5,#0
+ 96|less_letters:
+ 97|// function to calculate less letters
+ 98|      LDRB R2, [R0+R5]
+ 99|      ADD R5,R5,#1
+100|      CMP R2, #0
+101|//up to 4th block in the array should contain more than 0, else if there is a 0,
+102|//then less than 4 inputs have been entered
+103|      BEQ invalid
+104|      CMP R5, #4
+105|      BNE less_letters
+106|      MOV R5, #0
+107|      MOV R2,#0
+108|capital_simple: 
+109|      LDRB R2, [R0+R1] 
+110|      CMP R2, #65       // Compare R2 with ASCII 'A' (65)
+111|      BLT lowercase 
+112|      CMP R2, #90       // Compare R2 with ASCII 'Z' (90)
+113|      BGT lowercase 
+114|      ADD R2, R2, #32   // Convert uppercase letter to lowercase
+115|      STRB R2, [R0+R1] 
+116|lowercase: 
+117|      ADD R1, R1, #1
+118|      ADD R3, R3, #1    // Increment R3
+119|      STRB R2, [R0 + R5] // Store the byte from R2 into secretcode[R5]
+120|      ADD R5, R5, #1 
+121|      CMP R3, #4        // Compare R3 with 4
+122|      BNE capital_simple
+123|      MOV R5, #0
+124|      CMP R9, #1
+125|      BEQ store_to_secretcode_array
+126|      MOV R5, #0
+127|      CMP R9, #0
+128|      BEQ store_to_querycode_array
+129|pick_letter1:           // if  user inputs same letter twice
+130|      LDRB R2, [R0+R5]
+131|      MOV R7, R5
+132|pick_letter2:           // if  user inputs same letter twice
+133|      ADD R6, R7, #1
+134|      ADD R7, R7, #1
+135|      CMP R7, #4 
+136|      BEQ letters_counter
+137|      LDRB R3, [R0+R6]
+138|      CMP R2, R3        //searching for same ascii values
+139|      BEQ invalid
+140|      B pick_letter2
+141|letters_counter:
+142|      ADD R5, R5, #1
+143|      CMP R5, #4        //searching for repetition, if  user inputs a same letter twice
+144|      BEQ second_check
+145|      B pick_letter1
+146|second_check:
+147|      MOV R5, #0
+148|      MOV R7, #0
+149|rgbypc1:                // if the user inputs a wrong letter (check letter)  
+150|      LDRB R2, [R0+R5]
+151|      CMP R2, #114
+152|      BEQ rgbypc2
+153|      CMP R2, #103
+154|      BEQ rgbypc2
+155|      CMP R2, #98
+156|      BEQ rgbypc2
+157|      CMP R2, #121
+158|      BEQ rgbypc2
+159|      CMP R2, #112
+160|      BEQ rgbypc2
+161|      CMP R2, #99
+162|      BEQ rgbypc2
+163|      B invalid
+164|rgbypc2:                // if the user inputs a wrong letter (change checking letter)
+165|      ADD R5, R5, #1
+166|      CMP R5, #4
+167|      BEQ splitter
+168|      B rgbypc1
+169|      RET 
+170|splitter: 
+171|// based on value of R9 program will branched to different places
+172|      CMP R9, #1
+173|      BEQ get_code_breaker
+174|      CMP R9, #0
+175|      BEQ guess_counter
+176|//return
+177|//'r' has an ASCII value of 114.
+178|//'g' has an ASCII value of 103.
+179|//'b' has an ASCII value of 98.
+180|//'y' has an ASCII value of 121.
+181|//'p' has an ASCII value of 112.
+182|//'c' has an ASCII value of 99.
+183|store_to_secretcode_array:
+184|      MOV R8, #secretcode //initializes secretcode array to R0
+185|      MOV R6, #0
+186|//below code transfer data values stored in stringData array, to secretcode array
+187|      LDRB R6, [R0+R5]
+188|      STRB R6, [R8+R5]
+189|      ADD R5, R5, #1    //array increment
+190|      CMP R5, #4
+191|      BLT store_to_secretcode_array
+192|      MOV R5, #0
+193|      B rgbypc1
+194|/////
+195|///
+196|//
+197|store_to_querycode_array:
+198|      MOV R10, #querycode //initializes secretcode array to R0
+199|      MOV R6, #0
+200|//below code transfer data values stored in stringData array, to secretcode array
+201|      LDRB R6, [R0+R5]
+202|      STRB R6, [R10+R5]
+203|      ADD R5, R5, #1    //array increment
+204|      CMP R5, #4
+205|      BLT store_to_querycode_array
+206|      MOV R5, #0
+207|      B rgbypc1
+208|/////
+209|///
+210|//
+211|invalid:
+212|      MOV R1, #msg7
+213|      STR R1, .WriteString
+214|      CMP R9, #1        // if R9 = 1 program will be forwarded to get_code_maker
+215|      BEQ get_code_maker
+216|      CMP R9, #0
+217|      BEQ get_code_breaker // if R9 = 0 program will be forwarded to get_code_breaker
+218|//R9 is used to toggle between the code_maker input and the code_breaker input
+219|//--------------------------------------------------------------------------------------
+220|      .Align 256
+221|msg0: .ASCIZ "           Welcome to Mastermind"
+222|msg1: .ASCIZ "\nCodemaker's name: "
+223|msg2: .ASCIZ "\nCodebreaker's name: "
+224|msg3: .ASCIZ "\nMaximum number of guesses: "
+225|msg4: .ASCIZ "\nCodemaker is "
+226|msg5: .ASCIZ "\nCodebreaker is "
+227|stringData: .BLOCK 200
+228|msg6: .ASCIZ "\nColours:\nr - (red)\ng - (green)\nb - (blue)\ny - (yellow)\np - (purple)\nc - (cyan)\n"
+229|msg7: .ASCIZ "\nINVALID INPUT TRY AGAIN\n"
+230|msg8: .ASCIZ "Enter a code using the above colours:\n"
+231|msg9: .ASCIZ "\nprogram ended successfully!"
+232|msg10: .ASCIZ ", please enter a 4-character secret code"
+233|msg11: .ASCIZ ", this is guess number:"
+234|msg13: .ASCIZ "\n"
+235|code_maker: .BLOCK 200
+236|code_breaker: .BLOCK 200
+237|secretcode: .BLOCK 200
+238|querycode: .BLOCK 200

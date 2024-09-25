@@ -1,0 +1,44 @@
+  1|//-------------------------------- stage 1--------------------------------
+  2|//R1 for print strings
+  3|//R12 for guess numbers
+  4|      MOV R1, #msg0 
+  5|      STR R1, .WriteString
+  6|      MOV R1, #msg1
+  7|      STR R1, .WriteString
+  8|      MOV R1, #code_maker
+  9|      STR R1, .ReadString 
+ 10|// gets code maker name
+ 11|      STR R1, .WriteString
+ 12|      MOV R1, #msg2
+ 13|      STR R1, .WriteString
+ 14|      MOV R1, #code_breaker
+ 15|      STR R1, .ReadString 
+ 16|// gets code breaker name
+ 17|      STR R1, .WriteString
+ 18|      MOV R1, #msg3
+ 19|      STR R1, .WriteString
+ 20|      LDR R12, .InputNum 
+ 21|// gets the maximum number of guesses allowed by codemaker
+ 22|      STR R12, .WriteSignedNum
+ 23|      MOV R1, #msg4
+ 24|      STR R1, .WriteString
+ 25|      MOV R1, #code_maker
+ 26|      STR R1, .WriteString //displays code_maker name
+ 27|      MOV R1, #msg5
+ 28|      STR R1, .WriteString
+ 29|      MOV R1, #code_breaker
+ 30|      STR R1, .WriteString //displays code_breaker name
+ 31|      MOV R1, #msg3
+ 32|      STR R1, .WriteString
+ 33|      MOV R1, R12
+ 34|      STR R1, .WriteSignedNum
+ 35|      HALT
+ 36|      .Align 256
+ 37|msg0: .ASCIZ "           Welcome to Mastermind"
+ 38|msg1: .ASCIZ "\nCodemaker's name: "
+ 39|msg2: .ASCIZ "\nCodebreaker's name: "
+ 40|msg3: .ASCIZ "\nMaximum number of guesses: "
+ 41|msg4: .ASCIZ "\nCodemaker is "
+ 42|msg5: .ASCIZ "\nCodebreaker is "
+ 43|code_maker: .BLOCK 200
+ 44|code_breaker: .BLOCK 200

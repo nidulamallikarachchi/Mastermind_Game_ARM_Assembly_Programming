@@ -1,0 +1,161 @@
+  1|//-------------------------------- stage 2 -------------------------------- 
+  2|//R0 for store new code
+  3|//R1 for print strings
+  4|//R5 for counters
+  5|//R12 for guess numbers
+  6|      MOV R1, #msg0
+  7|      STR R1, .WriteString
+  8|      MOV R1, #msg1
+  9|      STR R1, .WriteString
+ 10|      MOV R1, #code_maker
+ 11|      STR R1, .ReadString 
+ 12|// gets code maker name
+ 13|      STR R1, .WriteString
+ 14|      MOV R1, #msg2
+ 15|      STR R1, .WriteString
+ 16|      MOV R1, #code_breaker
+ 17|      STR R1, .ReadString 
+ 18|// gets code breaker name
+ 19|      STR R1, .WriteString
+ 20|      MOV R1, #msg3
+ 21|      STR R1, .WriteString
+ 22|      LDR R12, .InputNum 
+ 23|// gets the maximum number of guesses allowed by codemaker
+ 24|      STR R12, .WriteSignedNum
+ 25|      MOV R1, #msg4
+ 26|      STR R1, .WriteString
+ 27|      MOV R1, #code_maker
+ 28|      STR R1, .WriteString
+ 29|      MOV R1, #msg5
+ 30|      STR R1, .WriteString
+ 31|      MOV R1, #code_breaker
+ 32|      STR R1, .WriteString
+ 33|      MOV R1, #msg3
+ 34|      STR R1, .WriteString
+ 35|      MOV R1, R12
+ 36|      STR R1, .WriteSignedNum
+ 37|      MOV R1, #msg6
+ 38|      STR R1, .WriteString
+ 39|get_code:               //GET CODE FUNCTION WITH VALIDATIONS
+ 40|      MOV R1, #msg8
+ 41|      STR R1, .WriteString
+ 42|      MOV R0, #stringData
+ 43|      STR R0, .ReadString //  Read for input
+ 44|      MOV R1, #0
+ 45|      MOV R3, #0
+ 46|      MOV R5, #0
+ 47|too_many_letters: 
+ 48|// function to calculate whether there are too many letters   
+ 49|      LDRB R2, [R0+R5] 
+ 50|      ADD R5,R5,#1
+ 51|      CMP R5, #5
+ 52|      BNE too_many_letters
+ 53|      CMP R2, #0
+ 54|//the 5th block in the array should contain 0, else if there is a value, 
+ 55|//then more than 4 inputs have been entered
+ 56|      BNE invalid       //if there are more than 4 letters -> invalid
+ 57|      MOV R5,#0
+ 58|less_letters:
+ 59|// function to calculate less letters
+ 60|      LDRB R2, [R0+R5]
+ 61|      ADD R5,R5,#1 
+ 62|      CMP R2, #0
+ 63|//up to 4th block in the array should contain more than 0, else if there is a 0, 
+ 64|//then less than 4 inputs have been entered
+ 65|      BEQ invalid
+ 66|      CMP R5, #4
+ 67|      BNE less_letters
+ 68|      MOV R2,#0
+ 69|capital_simple:         //Label for a code block
+ 70|      LDRB R2, [R0+R1]  //Load a byte from the address in R0+R1 into R2
+ 71|      CMP R2, #65       //Compare R2 with ASCII 'A' (65)
+ 72|      BLT lowercase 
+ 73|      CMP R2, #90       //Compare R2 with ASCII 'Z' (90)
+ 74|      BGT lowercase 
+ 75|      ADD R2, R2, #32   //Convert uppercase letter to lowercase
+ 76|      STRB R2, [R0+R1]  //Store the modified byte back at the same address
+ 77|lowercase:              //Label for a code block
+ 78|      ADD R3, R3, #1 
+ 79|      STRB R2, [R0 + R1] //Store the byte from R2 into secretcode[R5]
+ 80|      ADD R1, R1, #1
+ 81|      CMP R3, #4        //Compare R3 with 4
+ 82|      BNE capital_simple // If R3 != 4, go back to capital_simple
+ 83|      MOV R5, #0 
+ 84|//Below code obtains each data value entered by the user,
+ 85|//then it compares the data value with every other upcoming values in the array
+ 86|//if there is a match in ascii -> invalid
+ 87|pick_letter1:           // validation for if user inputs same letter twice 
+ 88|      LDRB R2, [R0+R5] 
+ 89|      MOV R7, R5 
+ 90|pick_letter2:           // validation for if user inputs same letter twice
+ 91|      ADD R6, R7, #1 
+ 92|      ADD R7, R7, #1
+ 93|      CMP R7, #4        //searching for letter repetition, if user inputs same letter twice
+ 94|      BEQ letters_counter
+ 95|      LDRB R3, [R0+R6] 
+ 96|      CMP R2, R3        //searching for same ascii values
+ 97|      BEQ invalid       //if ascii values are equal then -> invalid
+ 98|      B pick_letter2
+ 99|letters_counter:
+100|      ADD R5, R5, #1    //increment R5 counter to access following value in array
+101|      CMP R5, #4        //searching for repetition, if user inputs same letter twice
+102|      BEQ second_check
+103|      B pick_letter1
+104|second_check:
+105|      MOV R5, #0
+106|      MOV R7, #0
+107|//Below code obtains each data value entered by the user,
+108|//compares it with each allowable character (r,g,b,y,p,c) to see 
+109|//if it matches atleast one of the character: (r,g,b,y,p,c).
+110|rgbypc1:                // if  user inputs wrong letter
+111|      LDRB R2, [R0+R5] 
+112|      CMP R2,#114
+113|      BEQ rgbypc2
+114|      CMP R2,#103
+115|      BEQ rgbypc2
+116|      CMP R2,#98
+117|      BEQ rgbypc2
+118|      CMP R2,#121
+119|      BEQ rgbypc2
+120|      CMP R2,#112
+121|      BEQ rgbypc2
+122|      CMP R2,#99
+123|      BEQ rgbypc2
+124|      B invalid
+125|rgbypc2:                // if  user inputs wrong letter
+126|      ADD R5, R5, #1 
+127|      CMP R5, #4
+128|      BEQ end
+129|      B rgbypc1
+130|//'r' has an ASCII value of 114.
+131|//'g' has an ASCII value of 103.
+132|//'b' has an ASCII value of 98.
+133|//'y' has an ASCII value of 121.
+134|//'p' has an ASCII value of 112.
+135|//'c' has an ASCII value of 99.
+136|//After all the validations done in getcode, below function gives a confirmation that,
+137|//the input is valid
+138|end:
+139|      MOV R0, #0
+140|      MOV R5, #0
+141|      MOV R1, #msg9
+142|      STR R1, .WriteString
+143|      HALT
+144|invalid:
+145|      MOV R1, #msg7
+146|      STR R1, .WriteString
+147|      B get_code
+148|      .Align 256
+149|msg0: .ASCIZ "           Welcome to Mastermind"
+150|msg1: .ASCIZ "\nCodemaker's name: "
+151|msg2: .ASCIZ "\nCodebreaker's name: "
+152|msg3: .ASCIZ "\nMaximum number of guesses: "
+153|msg4: .ASCIZ "\nCodemaker is "
+154|msg5: .ASCIZ "\nCodebreaker is "
+155|stringData: .BLOCK 200
+156|msg6: .ASCIZ "\nColours:\nr - (red)\ng - (green)\nb - (blue)\ny - (yellow)\np - (purple)\nc - (cyan)\n"
+157|msg7: .ASCIZ "INVALID INPUT TRY AGAIN\n"
+158|msg8: .ASCIZ "Enter a code using the above colours:\n"
+159|msg9: .ASCIZ "\nprogram ended successfully!"
+160|code_maker: .BLOCK 200
+161|code_breaker: .BLOCK 200
